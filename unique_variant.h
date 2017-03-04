@@ -3,7 +3,9 @@
 #include "variant.h"
 #include <memory>
 
-template <template <typename T> class Hash, template <typename U> class Fail, class... Hp>
+template <template <typename T> class Hash,
+	template <typename U, typename... Left> class Fail,
+	class... Hp>
 class basic_unique_variant
 {
 	basic_variant<Hash, Fail, std::unique_ptr<Hp>...> value;
@@ -34,7 +36,7 @@ public:
 
 template <class... Args>
 using unique_variant = basic_unique_variant<type_hash, err_handler, Args...>;
-template <template <class T> class Handler, class... Args>
+template <template <class T, class... Left> class Handler, class... Args>
 using callback_unique_variant = basic_unique_variant<type_hash, Handler, Args...>;
 
 #endif
