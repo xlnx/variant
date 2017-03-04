@@ -2,8 +2,11 @@
 #include <string>
 #include "variant.h"
 using namespace std;
-using wvariant = unique_variant<std::string, int, double>;
 int main()
 {
-	wvariant var = wvariant::create<string>("shit");
+	variant<int, double> var = 3, v = 1.5;
+	var.make_switch<int, double>(
+		[](int& n){ std::cout << n << std::endl; },
+		[](double&){}
+	);
 }
