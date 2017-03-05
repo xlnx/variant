@@ -7,63 +7,65 @@
 template <template <typename T> class F, typename T, typename... Args>
 struct max_value
 {
-	enum { value = static_cast<int>(F<T>::value) > static_cast<int>(max_value<F, Args...>::value) ?
-		static_cast<int>(F<T>::value) : static_cast<int>(max_value<F, Args...>::value) };
+	static constexpr typename F<T>::value_type value = F<T>::value > max_value<F, Args...>::value ?
+			F<T>::value : max_value<F, Args...>::value;
 };
 
 template <template <typename T> class F, typename T>
 struct max_value<F, T>
 {
-	enum { value = F<T>::value };
+	static constexpr typename F<T>::value_type value = F<T>::value;
 };
 
 template <bool X, bool... Y>
 struct make_and
 {
-	enum { value = X && static_cast<bool>(make_and<Y...>::value) };
+	static constexpr bool value = X && make_and<Y...>::value;
 };
 
 template <bool X>
 struct make_and<X>
 {
-	enum { value = X };
+	static constexpr bool value = X;
 };
 
 template <typename T, typename U, typename... Args>
 struct contains
 {
-	enum { value = std::is_same<T, U>::value ?
-		true : contains<T, Args...>::value };
+	static constexpr bool value = std::is_same<T, U>::value ?
+		true : contains<T, Args...>::value;
 };
 
 template <typename T, typename U>
 struct contains<T, U>
 {
-	enum { value = std::is_same<T, U>::value };
+	static constexpr bool value = std::is_same<T, U>::value;
 };
 
 template <typename X, typename... Y>
 struct is_unique
 {
-	enum { value = !contains<X, Y...>::value && static_cast<bool>(is_unique<Y...>::value) };
+	static constexpr bool value = !contains<X, Y...>::value && is_unique<Y...>::value;
 };
 
 template <typename X>
 struct is_unique<X>
 {
-	enum { value = true };
+	static constexpr bool value = true;
 };
 
 template <typename T>
 struct size_of
 {
-	enum { value = sizeof(T) };
+	using value_type = unsigned;
+	static constexpr value_type value = sizeof(T);
 };
 
 template <typename T>
 struct align_of
 {
-	enum { value = std::alignment_of<T>::value };
+	using value_type = unsigned;
+	static constexpr value_type value = std::alignment_of<T>::value;
 };
 
 template <template <typename T> class Hash,
@@ -145,9 +147,9 @@ struct variant_iterator
 	template <template <typename X> class Hash,
 			template <typename U, typename... Left> class Fail,
 			typename... Y>
-		static bool make_switch(basic_variant<Hash, Fail, Y...>& var,
-			const std::function<void(T&)>& func,
-			const std::function<void(Args&)>&... call_back);
+		static bool make_match(basic_variant<Hash, Fail, Y...>& var,
+			std::function<void(T&)>&& func,
+			std::function<void(Args&)>&&... call_back);
 };
 
 template <typename T>
@@ -156,8 +158,8 @@ struct variant_iterator<T>
 	template <template <typename X> class Hash,
 			template <typename U, typename... Left> class Fail,
 			typename... Y>
-		static bool make_switch(basic_variant<Hash, Fail, Y...>& var,
-			const std::function<void(T&)>& func);
+		static bool make_match(basic_variant<Hash, Fail, Y...>& var,
+			std::function<void(T&)>&& func);
 };
 
 template <template <typename T> class Hash,
@@ -246,26 +248,27 @@ public:
 		return *this;
 	}
 public:
-	template <typename T> bool is()
+	template <typename T> bool is() const
 	{
 		return m_type == Hash<T>::value;
 	}
 	template <typename T> T& get()
 	{
 		if (is<T>()) return reinterpret_cast<T&>(buffer);
-		else Fail<T>::execute();
+			Fail<T>::execute();
 	}
 	template <typename... Y,
 		typename = typename std::enable_if<make_and<
 				is_unique<Y...>::value,
 				contains<Y, Args...>::value...
 			>::value>::type>
-	void make_switch(const std::function<void(Y&)>&... call_back)
+	void make_match(std::function<void(Y&)>&&... call_back)
 	{
-		if (!variant_iterator<Y...>::make_switch(*this, call_back...))
+		if (!variant_iterator<Y...>::make_match(*this,
+				std::forward<std::function<void(Y&)>>(call_back)...))
 			Fail<Y...>::execute();
 	}
-	typename Hash<void>::value_type type()
+	typename Hash<void>::value_type type() const
 	{
 		return m_type;
 	}
@@ -395,23 +398,24 @@ template <typename T, typename... Args>
 template <template <typename X> class Hash,
 		template <typename U, typename... Left> class Fail,
 		typename... Y>
-	bool variant_iterator<T, Args...>::make_switch(basic_variant<Hash, Fail, Y...>& var,
-		const std::function<void(T&)>& func,
-		const std::function<void(Args&)>&... call_back)
+	bool variant_iterator<T, Args...>::make_match(basic_variant<Hash, Fail, Y...>& var,
+		std::function<void(T&)>&& func,
+		std::function<void(Args&)>&&... call_back)
 	{
 		if (Hash<T>::value == var.m_type)
 		{
 			func(reinterpret_cast<T&>(var.buffer));
 			return true;
 		}
-		return variant_iterator<Args...>::make_switch(var, call_back...);
+		return variant_iterator<Args...>::make_match(var,
+			std::forward<std::function<void(Args&)>>(call_back)...);
 	}
 template <typename T>
 template <template <typename X> class Hash,
 		template <typename U, typename... Left> class Fail,
 		typename... Y>
-	bool variant_iterator<T>::make_switch(basic_variant<Hash, Fail, Y...>& var,
-		const std::function<void(T&)>& func)
+	bool variant_iterator<T>::make_match(basic_variant<Hash, Fail, Y...>& var,
+		std::function<void(T&)>&& func)
 	{
 		if (Hash<T>::value == var.m_type)
 		{
