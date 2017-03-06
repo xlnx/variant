@@ -272,6 +272,14 @@ public:
 	{
 		return m_type;
 	}
+	bool empty() const
+	{
+		return m_type == Hash<void>::value;
+	}
+	void reset()
+	{
+		if (m_type != Hash<void>::value) helper::destroy(*this);
+	}
 };
 
 template <typename T, typename... Args>
