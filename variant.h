@@ -358,7 +358,8 @@ template <template <typename X> class Hash,
 	void variant_helper<T>::destroy(
 		basic_variant<Hash, Fail, Y...>& var)
 	{
-		reinterpret_cast<T&>(var.buffer).~T();
+		if (var.m_type != Hash<void>::value)
+			reinterpret_cast<T&>(var.buffer).~T();
 	}
 template <typename T>
 template <template <typename X> class Hash,
@@ -368,7 +369,8 @@ template <template <typename X> class Hash,
 		basic_variant<Hash, Fail, Y...>& dest,
 		const basic_variant<Hash, Fail, Y...>& src)
 	{
-		new(&dest.buffer) T(reinterpret_cast<const T&>(src.buffer));
+		if (src.m_type != Hash<void>::value)
+			new(&dest.buffer) T(reinterpret_cast<const T&>(src.buffer));
 	}
 template <typename T>
 template <template <typename X> class Hash,
@@ -378,7 +380,8 @@ template <template <typename X> class Hash,
 		basic_variant<Hash, Fail, Y...>& dest,
 		basic_variant<Hash, Fail, Y...>&& src)
 	{
-		new(&dest.buffer) T(std::move(reinterpret_cast<T&>(src.buffer)));
+		if (src.m_type != Hash<void>::value)
+			new(&dest.buffer) T(std::move(reinterpret_cast<T&>(src.buffer)));
 	}
 template <typename T>
 template <template <typename X> class Hash,
@@ -388,7 +391,8 @@ template <template <typename X> class Hash,
 		basic_variant<Hash, Fail, Y...>& dest,
 		const basic_variant<Hash, Fail, Y...>& src)
 	{	
-		reinterpret_cast<T&>(dest.buffer) = reinterpret_cast<const T&>(src.buffer);
+		if (src.m_type != Hash<void>::value)
+			reinterpret_cast<T&>(dest.buffer) = reinterpret_cast<const T&>(src.buffer);
 	}
 template <typename T>
 template <template <typename X> class Hash,
@@ -398,7 +402,8 @@ template <template <typename X> class Hash,
 		basic_variant<Hash, Fail, Y...>& dest,
 		basic_variant<Hash, Fail, Y...>&& src)
 	{
-		reinterpret_cast<T&>(dest.buffer) = std::move(reinterpret_cast<T&>(src.buffer));
+		if (src.m_type != Hash<void>::value)
+			reinterpret_cast<T&>(dest.buffer) = std::move(reinterpret_cast<T&>(src.buffer));
 	}
 
 
